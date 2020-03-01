@@ -112,11 +112,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         http.csrf().disable()
                 .sessionManagement()
-                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                    .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                    .authorizeRequests()
                    .mvcMatchers("/hello", "/auth", "/refresh")
-                   .authenticated();
+                   .authenticated()
+                   .mvcMatchers("/public")
+                   .permitAll();
 
         http.addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), UsernamePasswordAuthenticationFilter.class)
             .addFilterAt(new JwtAuthRequestFilter(authenticationManager(),authenticationEntryPoint),
