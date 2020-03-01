@@ -1,6 +1,6 @@
 package com.ecommerce.SecurityService.util;
 
-import com.ecommerce.SecurityService.config.JwtUser;
+import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Clock;
 import io.jsonwebtoken.Jwts;
@@ -112,7 +112,7 @@ public class JwtTokenUtil implements Serializable {
         return (
             username.equals(user.getUsername())
                 && !isTokenExpired(token)
-                && !isCreatedBeforeLastPasswordReset(created, user.getLastPasswordResetDate())
+                && !isCreatedBeforeLastPasswordReset(created, new Date(Long.parseLong(user.getLastPasswordResetDate())))
         );
     }
 

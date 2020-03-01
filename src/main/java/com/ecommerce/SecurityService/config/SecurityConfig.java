@@ -6,9 +6,8 @@ import com.ecommerce.SecurityService.config.filter.JwtAuthorizationTokenFilter;
 import com.ecommerce.SecurityService.config.filter.VerifyLDAPUserFilter;
 import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
 import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
-import com.ecommerce.SecurityService.repository.entity.LdapUser;
+import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
-import com.ecommerce.SecurityService.util.JwtUserFactory;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -71,15 +70,15 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
             @Override
             public UserDetails mapUserFromContext(DirContextOperations ctx, String username, Collection<? extends GrantedAuthority> authorities) {
 
-                Optional<LdapUser> ldapUser = ldapUserRepository.findByUsername(username);
+                Optional<JwtUser> jwtUser = ldapUserRepository.findByUsername(username);
 
-                LdapUser userDetails = ldapUser
+                JwtUser userDetails = jwtUser
                         .orElseThrow(() -> new BadCredentialsException("Wrong username or password"));
 
                 userDetails.setAuthorities(authorities);
                 userDetails.setPassword(new String((byte[]) ctx.getObjectAttribute("userpassword")));
 
-                return JwtUserFactory.create(userDetails);
+                return userDetails;
             }
         };
     }

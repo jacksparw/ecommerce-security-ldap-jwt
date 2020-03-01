@@ -12,12 +12,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import javax.naming.Name;
 import java.util.Collection;
 
-
 @Data
 @NoArgsConstructor
 @Entry(base="ou=people,dc=springframework,dc=org", objectClasses = {
         "top", "inetOrgPerson", "person", "organizationalPerson"})
-public class LdapUser implements UserDetails {
+public class JwtUser implements UserDetails {
 
     private static final long serialVersionUID = 1L;
 

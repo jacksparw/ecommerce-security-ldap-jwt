@@ -1,12 +1,10 @@
 package com.ecommerce.SecurityService.config.filter;
 
-import com.ecommerce.SecurityService.config.JwtUser;
 import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
 import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
+import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.repository.entity.LdapRole;
-import com.ecommerce.SecurityService.repository.entity.LdapUser;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
-import com.ecommerce.SecurityService.util.JwtUserFactory;
 import io.jsonwebtoken.ExpiredJwtException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -69,19 +67,17 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             logger.debug("security context was null, so authorizing user");
 
-            LdapUser userDetails = ldapUserRepository.findByUsername(username).get();
+            JwtUser userDetails = ldapUserRepository.findByUsername(username).get();
 
             List<LdapRole> roleList = ldapRoleRepository.findAllByMembersContains(userDetails.getDn().toString());
 
             userDetails.setAuthorities(roleList.stream()
-                    .map(e -> e.getName())
-                    .map(e -> new SimpleGrantedAuthority(e))
+                    .map(role -> role.getName())
+                    .map(roleName -> new SimpleGrantedAuthority(roleName))
                     .collect(Collectors.toList()));
 
-            JwtUser jwtUser = JwtUserFactory.create(userDetails);
-
-            if (jwtTokenUtil.validateToken(authToken, jwtUser)) {
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(jwtUser, null, userDetails.getAuthorities());
+            if (jwtTokenUtil.validateToken(authToken, userDetails)) {
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 log.info("authorized user '{}', setting security context", username);
                 SecurityContextHolder.getContext().setAuthentication(authentication);

@@ -1,8 +1,7 @@
 package com.ecommerce.SecurityService.config.filter;
 
-import com.ecommerce.SecurityService.config.JwtUser;
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
-import com.ecommerce.SecurityService.repository.entity.LdapUser;
+import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;

@@ -1,3 +1,4 @@
+/*
 package com.ecommerce.SecurityService.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -7,9 +8,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Date;
 
+*/
 /**
  * Created by stephan on 20.03.16.
- */
+ *//*
+
 public class JwtUser implements UserDetails {
 
     private final String username;
@@ -96,3 +99,4 @@ public class JwtUser implements UserDetails {
         return lastPasswordResetDate;
     }
 }
+*/
