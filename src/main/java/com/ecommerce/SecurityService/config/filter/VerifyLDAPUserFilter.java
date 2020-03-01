@@ -1,5 +1,6 @@
 package com.ecommerce.SecurityService.config.filter;
 
+import com.ecommerce.SecurityService.config.JwtUser;
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
 import com.ecommerce.SecurityService.repository.entity.LdapUser;
 import org.springframework.security.authentication.DisabledException;
@@ -28,7 +29,7 @@ public class VerifyLDAPUserFilter extends OncePerRequestFilter {
 
         try {
             if (authentication != null && authentication.getPrincipal() != null) {
-                if (!((LdapUser) authentication.getPrincipal()).isEnabled()) {
+                if (!((JwtUser) authentication.getPrincipal()).isEnabled()) {
                     throw new DisabledException("Account Disabled");
                 }
             }

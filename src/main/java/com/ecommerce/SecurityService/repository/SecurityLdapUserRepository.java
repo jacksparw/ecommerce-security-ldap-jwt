@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface SecurityLdapRepository extends LdapRepository<LdapUser> {
+public interface SecurityLdapUserRepository extends LdapRepository<LdapUser> {
 
     Optional<LdapUser> findByUsername(String name);
 }

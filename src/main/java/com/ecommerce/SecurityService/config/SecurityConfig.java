@@ -1,18 +1,26 @@
 package com.ecommerce.SecurityService.config;
 
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
+import com.ecommerce.SecurityService.config.filter.JwtAuthRequestFilter;
+import com.ecommerce.SecurityService.config.filter.JwtAuthorizationTokenFilter;
 import com.ecommerce.SecurityService.config.filter.VerifyLDAPUserFilter;
-import com.ecommerce.SecurityService.repository.SecurityLdapRepository;
+import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
+import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
 import com.ecommerce.SecurityService.repository.entity.LdapUser;
+import com.ecommerce.SecurityService.util.JwtTokenUtil;
+import com.ecommerce.SecurityService.util.JwtUserFactory;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.ldap.repository.config.EnableLdapRepositories;
+import org.springframework.http.HttpMethod;
 import org.springframework.ldap.core.DirContextOperations;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -21,7 +29,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper;
 import org.springframework.security.ldap.userdetails.UserDetailsContextMapper;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -33,22 +41,37 @@ import java.util.Optional;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final SecurityLdapUserRepository ldapUserRepository;
+    private final SecurityLdapRoleRepository ldapRoleRepository;
 
-    public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint) {
+    @Value("${jwt.header}")
+    private String tokenHeader;
+
+    @Value("${jwt.route.authentication.path}")
+    private String authenticationPath;
+
+    public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint, JwtTokenUtil jwtTokenUtil, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository) {
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.ldapUserRepository = ldapUserRepository;
+        this.ldapRoleRepository = ldapRoleRepository;
+    }
+
+    @Bean
+    @Override
+    protected AuthenticationManager authenticationManager() throws Exception {
+        return super.authenticationManager();
     }
 
     @Bean
     public UserDetailsContextMapper userDetailsContextMapper() {
         return new LdapUserDetailsMapper() {
 
-            @Autowired
-            private SecurityLdapRepository ldapRepository;
-
             @Override
             public UserDetails mapUserFromContext(DirContextOperations ctx, String username, Collection<? extends GrantedAuthority> authorities) {
 
-                Optional<LdapUser> ldapUser = ldapRepository.findByUsername(username);
+                Optional<LdapUser> ldapUser = ldapUserRepository.findByUsername(username);
 
                 LdapUser userDetails = ldapUser
                         .orElseThrow(() -> new BadCredentialsException("Wrong username or password"));
@@ -56,7 +79,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 userDetails.setAuthorities(authorities);
                 userDetails.setPassword(new String((byte[]) ctx.getObjectAttribute("userpassword")));
 
-                return userDetails;
+                return JwtUserFactory.create(userDetails);
             }
         };
     }
@@ -87,19 +110,37 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         //@formatter:off
 
-        http.sessionManagement()
+        http.csrf().disable()
+                .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
-                    .httpBasic()
-                .and()
                    .authorizeRequests()
-                   .mvcMatchers("/hello")
+                   .mvcMatchers("/hello", "/auth", "/refresh")
                    .authenticated();
 
-        http
-            .addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), BasicAuthenticationFilter.class);
-
+        http.addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(new JwtAuthRequestFilter(authenticationManager(),authenticationEntryPoint),
+                    UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(new JwtAuthorizationTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository),
+                    UsernamePasswordAuthenticationFilter.class);
 
         //@formatter:on
+    }
+
+    @Override
+    public void configure(WebSecurity web) {
+        // AuthenticationTokenFilter will ignore the below paths
+        web
+                // allow anonymous resource requests
+                .ignoring()
+                .antMatchers(
+                        HttpMethod.GET,
+                        "/",
+                        "/*.html",
+                        "/favicon.ico",
+                        "/**/*.html",
+                        "/**/*.css",
+                        "/**/*.js"
+                );
     }
 }
