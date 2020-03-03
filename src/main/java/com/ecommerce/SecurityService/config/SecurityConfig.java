@@ -113,6 +113,8 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .sessionManagement()
                     .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
+                    .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint)
+                .and()
                    .authorizeRequests()
                    .mvcMatchers("/hello", "/auth", "/refresh")
                    .authenticated()

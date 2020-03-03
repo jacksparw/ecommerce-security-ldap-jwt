@@ -6,6 +6,7 @@ import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.repository.entity.LdapRole;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.SignatureException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -56,8 +57,8 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
                 logger.error("an error occurred during getting username from token", e);
             } catch (ExpiredJwtException e) {
                 logger.warn("the token is expired and not valid anymore", e);
-            } catch (Exception e) {
-                throw e;
+            } catch (SignatureException e) {
+                logger.warn("Invalid Token", e);
             }
         } else {
             log.warn("couldn't find bearer string, will ignore the header");
