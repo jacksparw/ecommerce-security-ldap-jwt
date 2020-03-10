@@ -50,6 +50,9 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Value("${jwt.route.authentication.path}")
     private String authenticationPath;
 
+    @Value("${spring.ldap.embedded.port}")
+    private String ldapPort;
+
     public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint, JwtTokenUtil jwtTokenUtil, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.jwtTokenUtil = jwtTokenUtil;
@@ -93,7 +96,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
            .userDnPatterns("uid={0},ou=people")
            .groupSearchBase("ou=groups")
            .contextSource()
-                .url("ldap://127.0.0.1:8388/dc=springframework,dc=org")
+                .url("ldap://127.0.0.1:"+ldapPort+"/dc=springframework,dc=org")
             .and()
             .passwordCompare()
               .passwordEncoder(new BCryptPasswordEncoder())
