@@ -2,6 +2,7 @@ package com.ecommerce.SecurityService.config.filter;
 
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
 import com.ecommerce.SecurityService.dto.JwtAuthenticationRequest;
+import com.ecommerce.SecurityService.util.SecurityURLSettings;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -21,11 +22,12 @@ import java.io.IOException;
 public class JwtAuthRequestFilter extends OncePerRequestFilter {
 
     private final AuthenticationManager authenticationManager;
-
+    private final SecurityURLSettings securityURLSettings;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
 
-    public JwtAuthRequestFilter(AuthenticationManager authenticationManager, JwtAuthenticationEntryPoint authenticationEntryPoint) {
+    public JwtAuthRequestFilter(AuthenticationManager authenticationManager, SecurityURLSettings securityURLSettings, JwtAuthenticationEntryPoint authenticationEntryPoint) {
         this.authenticationManager = authenticationManager;
+        this.securityURLSettings = securityURLSettings;
         this.authenticationEntryPoint = authenticationEntryPoint;
     }
 
@@ -33,7 +35,7 @@ public class JwtAuthRequestFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
 
-        if (!request.getServletPath().equalsIgnoreCase("/auth")) {
+        if (!request.getServletPath().equalsIgnoreCase(securityURLSettings.getAuthenticationPath())) {
             chain.doFilter(request, response);
             return;
         }

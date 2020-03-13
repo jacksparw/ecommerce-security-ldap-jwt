@@ -6,6 +6,7 @@ import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
 import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.repository.entity.LdapRole;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
+import com.ecommerce.SecurityService.util.SecurityURLSettings;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.SignatureException;
 import lombok.extern.log4j.Log4j2;
@@ -31,19 +32,21 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     private final SecurityLdapUserRepository ldapUserRepository;
     private final SecurityLdapRoleRepository ldapRoleRepository;
     private final IRedisService redisService;
+    private final SecurityURLSettings securityURLSettings;
 
-    public JwtAuthorizationTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService) {
+    public JwtAuthorizationTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService, SecurityURLSettings securityURLSettings) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.tokenHeader = tokenHeader;
         this.ldapUserRepository = ldapUserRepository;
         this.ldapRoleRepository = ldapRoleRepository;
         this.redisService = redisService;
+        this.securityURLSettings = securityURLSettings;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
 
-        if (request.getServletPath().equalsIgnoreCase("/auth")){
+        if (request.getServletPath().equalsIgnoreCase(securityURLSettings.getAuthenticationPath())){
             chain.doFilter(request, response);
             return;
         }

@@ -5,6 +5,7 @@ import com.ecommerce.SecurityService.redis.IRedisService;
 import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,9 +22,6 @@ public class AuthenticationRestController {
     private final JwtTokenUtil jwtTokenUtil;
     private final IRedisService redisService;
 
-    @Value("${jwt.header}")
-    private String tokenHeader;
-
     @Value("${jwt.token.redis.expiryInMinutes:10}")
     private int redisExpiryTimeInMinutes;
 
@@ -32,7 +30,7 @@ public class AuthenticationRestController {
         this.redisService = redisService;
     }
 
-    @RequestMapping(value = "${jwt.route.authentication.path}", method = RequestMethod.POST)
+    @RequestMapping(value = "${jwt.route.authentication.authenticationPath}", method = RequestMethod.POST)
     public ResponseEntity<?> createAuthenticationToken(Authentication authentication) {
 
         String authToken = jwtTokenUtil.generateToken((UserDetails) authentication.getPrincipal());
@@ -41,8 +39,8 @@ public class AuthenticationRestController {
         return ResponseEntity.ok(new JwtAuthenticationResponse(authToken));
     }
 
-    @RequestMapping(value = "${jwt.route.authentication.refresh}", method = RequestMethod.POST)
-    public ResponseEntity<?> refreshAuthenticationToken(@RequestHeader("Authorization") String authToken, Authentication authentication) {
+    @RequestMapping(value = "${jwt.route.authentication.refreshPath}", method = RequestMethod.POST)
+    public ResponseEntity<?> refreshAuthenticationToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String authToken, Authentication authentication) {
         JwtUser user = (JwtUser) authentication.getPrincipal();
         final String token = authToken.substring(7);
 
@@ -57,5 +55,12 @@ public class AuthenticationRestController {
         } else {
             return ResponseEntity.badRequest().body(null);
         }
+    }
+
+    @RequestMapping(value = "${jwt.route.authentication.invalidatePath}", method = RequestMethod.POST)
+    public ResponseEntity<?> invalidateToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String authToken) {
+        redisService.deleteKey(authToken.substring(7));
+
+        return ResponseEntity.ok().body(null);
     }
 }
