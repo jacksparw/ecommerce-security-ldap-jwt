@@ -1,5 +1,6 @@
 package com.ecommerce.SecurityService.config.filter;
 
+import com.ecommerce.SecurityService.redis.IRedisService;
 import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
 import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
 import com.ecommerce.SecurityService.repository.entity.JwtUser;
@@ -29,12 +30,14 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     private final String tokenHeader;
     private final SecurityLdapUserRepository ldapUserRepository;
     private final SecurityLdapRoleRepository ldapRoleRepository;
+    private final IRedisService redisService;
 
-    public JwtAuthorizationTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository) {
+    public JwtAuthorizationTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.tokenHeader = tokenHeader;
         this.ldapUserRepository = ldapUserRepository;
         this.ldapRoleRepository = ldapRoleRepository;
+        this.redisService = redisService;
     }
 
     @Override
@@ -51,14 +54,17 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
         String authToken = null;
         if (requestHeader != null && requestHeader.startsWith("Bearer ")) {
             authToken = requestHeader.substring(7);
-            try {
-                username = jwtTokenUtil.getUsernameFromToken(authToken);
-            } catch (IllegalArgumentException e) {
-                logger.error("an error occurred during getting username from token", e);
-            } catch (ExpiredJwtException e) {
-                logger.warn("the token is expired and not valid anymore", e);
-            } catch (SignatureException e) {
-                logger.warn("Invalid Token", e);
+
+            if(redisService.searchKey(authToken)) {
+                try {
+                    username = jwtTokenUtil.getUsernameFromToken(authToken);
+                } catch (IllegalArgumentException e) {
+                    logger.error("an error occurred during getting username from token", e);
+                } catch (ExpiredJwtException e) {
+                    logger.warn("the token is expired and not valid anymore", e);
+                } catch (SignatureException e) {
+                    logger.warn("Invalid Token", e);
+                }
             }
         } else {
             log.warn("couldn't find bearer string, will ignore the header");

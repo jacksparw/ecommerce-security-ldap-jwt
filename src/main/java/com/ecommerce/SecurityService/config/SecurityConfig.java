@@ -4,6 +4,7 @@ import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoi
 import com.ecommerce.SecurityService.config.filter.JwtAuthRequestFilter;
 import com.ecommerce.SecurityService.config.filter.JwtAuthorizationTokenFilter;
 import com.ecommerce.SecurityService.config.filter.VerifyLDAPUserFilter;
+import com.ecommerce.SecurityService.redis.IRedisService;
 import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
 import com.ecommerce.SecurityService.repository.SecurityLdapUserRepository;
 import com.ecommerce.SecurityService.repository.entity.JwtUser;
@@ -43,6 +44,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final JwtTokenUtil jwtTokenUtil;
     private final SecurityLdapUserRepository ldapUserRepository;
     private final SecurityLdapRoleRepository ldapRoleRepository;
+    private final IRedisService redisService;
 
     @Value("${jwt.header}")
     private String tokenHeader;
@@ -53,11 +55,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Value("${spring.ldap.embedded.port}")
     private String ldapPort;
 
-    public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint, JwtTokenUtil jwtTokenUtil, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository) {
+    public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint, JwtTokenUtil jwtTokenUtil, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService) {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.jwtTokenUtil = jwtTokenUtil;
         this.ldapUserRepository = ldapUserRepository;
         this.ldapRoleRepository = ldapRoleRepository;
+        this.redisService = redisService;
     }
 
     @Bean
@@ -119,7 +122,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint)
                 .and()
                    .authorizeRequests()
-                   .mvcMatchers("/hello", "/auth", "/refresh")
+                   .mvcMatchers("/hello", "/auth", "/refresh", "/logout")
                    .authenticated()
                    .mvcMatchers("/public")
                    .permitAll();
@@ -127,7 +130,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         http.addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), UsernamePasswordAuthenticationFilter.class)
             .addFilterAt(new JwtAuthRequestFilter(authenticationManager(),authenticationEntryPoint),
                     UsernamePasswordAuthenticationFilter.class)
-            .addFilterAt(new JwtAuthorizationTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository),
+            .addFilterAt(new JwtAuthorizationTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository, redisService),
                     UsernamePasswordAuthenticationFilter.class);
 
         //@formatter:on
