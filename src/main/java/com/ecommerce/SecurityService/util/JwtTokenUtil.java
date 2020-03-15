@@ -26,7 +26,7 @@ public class JwtTokenUtil implements Serializable {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.expiration.minutes:10}")
     private Long expiration;
 
     public String getUsernameFromToken(String token) {
@@ -117,6 +117,6 @@ public class JwtTokenUtil implements Serializable {
     }
 
     private Date calculateExpirationDate(Date createdDate) {
-        return new Date(createdDate.getTime() + expiration * 1000);
+        return new Date(createdDate.getTime() + expiration * 60000);
     }
 }
