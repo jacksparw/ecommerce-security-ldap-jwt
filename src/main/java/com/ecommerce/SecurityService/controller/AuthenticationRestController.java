@@ -4,7 +4,6 @@ import com.ecommerce.SecurityService.dto.JwtAuthenticationResponse;
 import com.ecommerce.SecurityService.redis.IRedisService;
 import com.ecommerce.SecurityService.repository.entity.JwtUser;
 import com.ecommerce.SecurityService.util.JwtTokenUtil;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,9 +21,6 @@ public class AuthenticationRestController {
     private final JwtTokenUtil jwtTokenUtil;
     private final IRedisService redisService;
 
-    @Value("${jwt.token.redis.expiryInMinutes:10}")
-    private int redisExpiryTimeInMinutes;
-
     public AuthenticationRestController(JwtTokenUtil jwtTokenUtil, IRedisService redisService) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.redisService = redisService;
@@ -34,7 +30,7 @@ public class AuthenticationRestController {
     public ResponseEntity<?> createAuthenticationToken(Authentication authentication) {
 
         String authToken = jwtTokenUtil.generateToken((UserDetails) authentication.getPrincipal());
-        redisService.addKey(authToken, redisExpiryTimeInMinutes);
+        redisService.addKey(authToken);
 
         return ResponseEntity.ok(new JwtAuthenticationResponse(authToken));
     }
@@ -49,7 +45,7 @@ public class AuthenticationRestController {
         if (jwtTokenUtil.canTokenBeRefreshed(token, new Date(Long.parseLong(user.getLastPasswordResetDate())))) {
             String refreshedToken = jwtTokenUtil.refreshToken(token);
 
-            redisService.addKey(refreshedToken, redisExpiryTimeInMinutes);
+            redisService.addKey(refreshedToken);
 
             return ResponseEntity.ok(new JwtAuthenticationResponse(refreshedToken));
         } else {

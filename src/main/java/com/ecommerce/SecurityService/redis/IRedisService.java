@@ -7,7 +7,7 @@ public interface IRedisService {
 
     boolean searchKey(String key);
 
-    boolean addKey(String key, int timeInMinutes);
+    boolean addKey(String key);
 
     boolean deleteKey(String key);
 }
