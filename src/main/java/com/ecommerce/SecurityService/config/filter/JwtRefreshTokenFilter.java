@@ -23,7 +23,7 @@ import static com.ecommerce.SecurityService.config.filter.JWTAuthUtil.addAuthent
 import static com.ecommerce.SecurityService.config.filter.JWTAuthUtil.createJwtUser;
 
 @Log4j2
-public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
+public class JwtRefreshTokenFilter extends OncePerRequestFilter {
 
     private final JwtTokenUtil jwtTokenUtil;
     private final String tokenHeader;
@@ -32,7 +32,7 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     private final IRedisService redisService;
     private final SecurityURLSettings securityURLSettings;
 
-    public JwtAuthorizationTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService, SecurityURLSettings securityURLSettings) {
+    public JwtRefreshTokenFilter(JwtTokenUtil jwtTokenUtil, String tokenHeader, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService, SecurityURLSettings securityURLSettings) {
         this.jwtTokenUtil = jwtTokenUtil;
         this.tokenHeader = tokenHeader;
         this.ldapUserRepository = ldapUserRepository;
@@ -44,38 +44,35 @@ public class JwtAuthorizationTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws ServletException, IOException {
 
-        if (request.getServletPath().equalsIgnoreCase(securityURLSettings.getAuthenticationPath())
-                || request.getServletPath().equalsIgnoreCase(securityURLSettings.getRefreshPath())) {
-            chain.doFilter(request, response);
-            return;
-        }
+        if (request.getServletPath().equalsIgnoreCase(securityURLSettings.getRefreshPath())) {
+            final String requestHeader = request.getHeader(tokenHeader);
 
-        final String requestHeader = request.getHeader(tokenHeader);
+            String username = null;
+            String refreshToken = null;
+            if (requestHeader != null && requestHeader.startsWith("Bearer ")) {
+                refreshToken = requestHeader.substring(7);
 
-        String username = null;
-        String authToken = null;
-        if (requestHeader != null && requestHeader.startsWith("Bearer ")) {
-            authToken = requestHeader.substring(7);
-
-            if(redisService.searchKey(authToken)) {
-                try {
-                    if (jwtTokenUtil.getTokenType(authToken).equalsIgnoreCase(TokenType.AUTH.name())) {
-                        username = jwtTokenUtil.getUsernameFromToken(authToken);
+                if (redisService.searchKey(refreshToken)) {
+                    try {
+                        if (jwtTokenUtil.getTokenType(refreshToken).equalsIgnoreCase(TokenType.REFRESH.name())) {
+                            username = jwtTokenUtil.getUsernameFromToken(refreshToken);
+                        }
+                    } catch (IllegalArgumentException | ExpiredJwtException | SignatureException e) {
+                        logger.error("an error occurred during getting username from token", e);
                     }
-                } catch (IllegalArgumentException | ExpiredJwtException | SignatureException e) {
-                    logger.error("an error occurred during getting username from token", e);
                 }
+            } else {
+                log.warn("couldn't find bearer string, will ignore the header");
             }
-        } else {
-            log.warn("couldn't find bearer string, will ignore the header");
-        }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                logger.debug("security context was null, so authorizing user");
 
-            JwtUser userDetails = createJwtUser(username, ldapUserRepository, ldapRoleRepository);
+                JwtUser userDetails = createJwtUser(username, ldapUserRepository, ldapRoleRepository);
 
-            if (jwtTokenUtil.validateToken(authToken, userDetails)) {
-                addAuthenticationInSecurityContext(request, username, userDetails);
+                if (jwtTokenUtil.validateToken(refreshToken, userDetails)) {
+                    addAuthenticationInSecurityContext(request, username, userDetails);
+                }
             }
         }
 

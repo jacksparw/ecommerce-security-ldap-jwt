@@ -22,10 +22,11 @@ public class RedisService implements IRedisService {
     }
 
     @Override
-    public boolean addKey(String key) {
-
+    public boolean addKey(String key, int expTimeInMinutes) {
         SetOperations setOperations = redisTemplate.opsForSet();
-        return setOperations.add(DigestUtils.md5DigestAsHex(key.getBytes()), "") == 1;
+        setOperations.add(DigestUtils.md5DigestAsHex(key.getBytes()), "");
+
+        return redisTemplate.expire(DigestUtils.md5DigestAsHex(key.getBytes()), expTimeInMinutes, TimeUnit.MINUTES);
     }
 
     @Override

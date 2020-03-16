@@ -20,6 +20,7 @@ import java.util.function.Function;
 public class JwtTokenUtil implements Serializable {
 
     private static final long serialVersionUID = -3301605591108950415L;
+    private static final String TYPE = "type";
 
     private Clock clock = DefaultClock.INSTANCE;
 
@@ -33,6 +34,10 @@ public class JwtTokenUtil implements Serializable {
         return getClaimFromToken(token, Claims::getSubject);
     }
 
+    public String getTokenType(String token) {
+        return getClaimFromToken(token, claims -> claims.get(TYPE, String.class));
+    }
+
     public Date getIssuedAtDateFromToken(String token) {
         return getClaimFromToken(token, Claims::getIssuedAt);
     }
@@ -41,7 +46,7 @@ public class JwtTokenUtil implements Serializable {
         return getClaimFromToken(token, Claims::getExpiration);
     }
 
-    public <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
+    private <T> T getClaimFromToken(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = getAllClaimsFromToken(token);
         return claimsResolver.apply(claims);
     }
@@ -62,19 +67,27 @@ public class JwtTokenUtil implements Serializable {
         return (lastPasswordReset != null && created.before(lastPasswordReset));
     }
 
-    private Boolean ignoreTokenExpiration(String token) {
-        // here you specify tokens, for that the expiration is ignored
-        return false;
-    }
-
-    public String generateToken(UserDetails userDetails) {
+    public String generateAuthToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        return doGenerateToken(claims, userDetails.getUsername());
+        claims.put(TYPE, TokenType.AUTH.name());
+
+        final Date createdDate = clock.now();
+        final Date expirationDate = calculateExpirationDateAuthToken(createdDate);
+
+        return doGenerateToken(claims, userDetails.getUsername(), createdDate, expirationDate);
     }
 
-    private String doGenerateToken(Map<String, Object> claims, String subject) {
+    public String generateRefreshToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(TYPE, TokenType.REFRESH.name());
+
         final Date createdDate = clock.now();
-        final Date expirationDate = calculateExpirationDate(createdDate);
+        final Date expirationDate = calculateExpirationDateRefreshToken(createdDate);
+
+        return doGenerateToken(claims, userDetails.getUsername(), createdDate, expirationDate);
+    }
+
+    private String doGenerateToken(Map<String, Object> claims, String subject, Date createdDate, Date expirationDate) {
 
         return Jwts.builder()
             .setClaims(claims)
@@ -88,21 +101,7 @@ public class JwtTokenUtil implements Serializable {
     public Boolean canTokenBeRefreshed(String token, Date lastPasswordReset) {
         final Date created = getIssuedAtDateFromToken(token);
         return !isCreatedBeforeLastPasswordReset(created, lastPasswordReset)
-            && (!isTokenExpired(token) || ignoreTokenExpiration(token));
-    }
-
-    public String refreshToken(String token) {
-        final Date createdDate = clock.now();
-        final Date expirationDate = calculateExpirationDate(createdDate);
-
-        final Claims claims = getAllClaimsFromToken(token);
-        claims.setIssuedAt(createdDate);
-        claims.setExpiration(expirationDate);
-
-        return Jwts.builder()
-            .setClaims(claims)
-            .signWith(SignatureAlgorithm.HS512, secret)
-            .compact();
+            && (!isTokenExpired(token));
     }
 
     public Boolean validateToken(String token, UserDetails userDetails) {
@@ -116,7 +115,15 @@ public class JwtTokenUtil implements Serializable {
         );
     }
 
-    private Date calculateExpirationDate(Date createdDate) {
+    private Date calculateExpirationDateAuthToken(Date createdDate) {
         return new Date(createdDate.getTime() + expiration * 60000);
+    }
+
+    /**
+     * Refresh token valid for 4 time more time than auth token
+     * e.g. if auth token is valid for 10 min, refresh token will be valid for 30 min
+     */
+    private Date calculateExpirationDateRefreshToken(Date createdDate) {
+        return new Date(createdDate.getTime() + expiration * 3 * 60000);
     }
 }

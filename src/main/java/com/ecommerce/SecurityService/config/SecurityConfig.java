@@ -3,6 +3,7 @@ package com.ecommerce.SecurityService.config;
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
 import com.ecommerce.SecurityService.config.filter.JwtAuthRequestFilter;
 import com.ecommerce.SecurityService.config.filter.JwtAuthorizationTokenFilter;
+import com.ecommerce.SecurityService.config.filter.JwtRefreshTokenFilter;
 import com.ecommerce.SecurityService.config.filter.VerifyLDAPUserFilter;
 import com.ecommerce.SecurityService.redis.IRedisService;
 import com.ecommerce.SecurityService.repository.SecurityLdapRoleRepository;
@@ -130,11 +131,13 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                    .mvcMatchers("/public")
                    .permitAll();
 
-        http.addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), UsernamePasswordAuthenticationFilter.class)
-            .addFilterAt(new JwtAuthRequestFilter(authenticationManager(),securityURLSettings, authenticationEntryPoint),
+        http.addFilterAt(new JwtAuthRequestFilter(authenticationManager(),securityURLSettings, authenticationEntryPoint),
                     UsernamePasswordAuthenticationFilter.class)
             .addFilterAt(new JwtAuthorizationTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository, redisService, securityURLSettings),
-                    UsernamePasswordAuthenticationFilter.class);
+                    UsernamePasswordAuthenticationFilter.class)
+            .addFilterAt(new JwtRefreshTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository, redisService, securityURLSettings),
+                UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(new VerifyLDAPUserFilter(authenticationEntryPoint), UsernamePasswordAuthenticationFilter.class);
 
         //@formatter:on
     }
