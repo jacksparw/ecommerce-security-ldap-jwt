@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk-alpine
+FROM adoptopenjdk/openjdk8-openj9
 
 VOLUME /tmp
 ARG DEPENDENCY=target/dependency
