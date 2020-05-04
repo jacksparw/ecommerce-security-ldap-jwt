@@ -18,7 +18,7 @@ public class JWTAuthUtil {
     static JwtUser createJwtUser(String username, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository) {
         JwtUser userDetails = ldapUserRepository.findByUsername(username).get();
 
-        List<LdapRole> roleList = ldapRoleRepository.findAllByMembersContains(userDetails.getDn().toString());
+        List<LdapRole> roleList = ldapRoleRepository.findAllByMembersEquals(userDetails.getDn().toString());
 
         userDetails.setAuthorities(roleList.stream()
                 .map(role -> role.getName())

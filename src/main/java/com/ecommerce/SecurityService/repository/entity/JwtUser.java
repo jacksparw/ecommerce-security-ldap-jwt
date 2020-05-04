@@ -14,8 +14,8 @@ import java.util.Collection;
 
 @Data
 @NoArgsConstructor
-@Entry(base="ou=people,dc=springframework,dc=org", objectClasses = {
-        "top", "inetOrgPerson", "person", "organizationalPerson"})
+@Entry(base = "ou=users",
+        objectClasses = {"customMicroservice", "extensibleObject", "inetOrgPerson", "organizationalPerson", "person", "top"})
 public class JwtUser implements UserDetails {
 
     private static final long serialVersionUID = 1L;

@@ -9,16 +9,11 @@ import javax.naming.Name;
 import java.util.List;
 
 @Data
-@Entry(objectClasses = {"groupOfUniqueNames", "top"}, base = "ou=groups,dc=springframework,dc=org")
+@Entry(objectClasses = {"groupOfUniqueNames", "top"},
+        base = "ou=roles")
 public class LdapRole {
 
-    @Id
-    private Name dn;
-
-    private @Attribute(name = "cn")
-    String name;
-
-    private @Attribute(name = "uniqueMember")
-    List<String> members;
-
+    private @Id Name dn;
+    private @Attribute(name = "cn") String name;
+    private @Attribute(name = "uniqueMember") List<String> members;
 }

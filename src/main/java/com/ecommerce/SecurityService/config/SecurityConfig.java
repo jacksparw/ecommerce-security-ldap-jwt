@@ -1,7 +1,7 @@
 package com.ecommerce.SecurityService.config;
 
 import com.ecommerce.SecurityService.config.entryPoint.JwtAuthenticationEntryPoint;
-import com.ecommerce.SecurityService.config.filter.JwtAuthRequestFilter;
+import com.ecommerce.SecurityService.config.filter.JwtAuthenticationRequestFilter;
 import com.ecommerce.SecurityService.config.filter.JwtAuthorizationTokenFilter;
 import com.ecommerce.SecurityService.config.filter.JwtRefreshTokenFilter;
 import com.ecommerce.SecurityService.config.filter.VerifyLDAPUserFilter;
@@ -15,7 +15,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.ldap.repository.config.EnableLdapRepositories;
 import org.springframework.http.HttpMethod;
 import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -39,7 +38,6 @@ import java.util.Optional;
 @Log4j2
 @Configuration
 @EnableWebSecurity
-@EnableLdapRepositories(basePackages = "com.ecommerce.SecurityService.*")
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
@@ -49,11 +47,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     private final IRedisService redisService;
     private final SecurityURLSettings securityURLSettings;
 
-    @Value("${jwt.header}")
-    private String tokenHeader;
-
-    @Value("${spring.ldap.embedded.port}")
-    private String ldapPort;
+    //@formatter:off
+    private @Value("${jwt.header}") String tokenHeader;
+    private @Value("${ldap.url}") String ldapURL;
+    private @Value("${ldap.partitionSuffix}") String ldapPartitionSuffix;
+    private @Value("${ldap.userDnPattern}") String ldapUserDNPattern;
+    private @Value("${ldap.groupSearchBase}") String ldapGroupSearchBase;
+    private @Value("${ldap.passwordAttribute}") String ldapPasswordAttribute;
+    //@formatter:on
 
     public SecurityConfig(JwtAuthenticationEntryPoint authenticationEntryPoint, JwtTokenUtil jwtTokenUtil, SecurityLdapUserRepository ldapUserRepository, SecurityLdapRoleRepository ldapRoleRepository, IRedisService redisService, SecurityURLSettings securityURLSettings) {
         this.authenticationEntryPoint = authenticationEntryPoint;
@@ -97,14 +98,14 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
         auth
            .ldapAuthentication()
-           .userDnPatterns("uid={0},ou=people")
-           .groupSearchBase("ou=groups")
+           .userDnPatterns(ldapUserDNPattern)
+           .groupSearchBase(ldapGroupSearchBase)
            .contextSource()
-                .url("ldap://127.0.0.1:"+ldapPort+"/dc=springframework,dc=org")
+                .url(ldapURL+ldapPartitionSuffix)
             .and()
             .passwordCompare()
               .passwordEncoder(new BCryptPasswordEncoder())
-              .passwordAttribute("userPassword")
+              .passwordAttribute(ldapPasswordAttribute)
             .and()
                 .userDetailsContextMapper(userDetailsContextMapper());
 
@@ -123,15 +124,16 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                     .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint)
                 .and()
                    .authorizeRequests()
-                   .mvcMatchers("/hello",
-                           securityURLSettings.getAuthenticationPath(),
-                           securityURLSettings.getRefreshPath(),
-                           securityURLSettings.getInvalidatePath())
-                   .authenticated()
+                   .mvcMatchers("/hello")
+                        .hasAnyAuthority("developer", "admin")
+                   .mvcMatchers(securityURLSettings.getAuthenticationPath(),
+                                securityURLSettings.getRefreshPath(),
+                                securityURLSettings.getInvalidatePath())
+                        .authenticated()
                    .mvcMatchers("/public")
-                   .permitAll();
+                        .permitAll();
 
-        http.addFilterAt(new JwtAuthRequestFilter(authenticationManager(),securityURLSettings, authenticationEntryPoint),
+        http.addFilterAt(new JwtAuthenticationRequestFilter(authenticationManager(),securityURLSettings, authenticationEntryPoint),
                     UsernamePasswordAuthenticationFilter.class)
             .addFilterAt(new JwtAuthorizationTokenFilter(jwtTokenUtil,tokenHeader, ldapUserRepository, ldapRoleRepository, redisService, securityURLSettings),
                     UsernamePasswordAuthenticationFilter.class)

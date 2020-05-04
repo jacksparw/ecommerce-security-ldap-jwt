@@ -9,5 +9,5 @@ import java.util.List;
 @Repository
 public interface SecurityLdapRoleRepository extends LdapRepository<LdapRole> {
 
-    List<LdapRole> findAllByMembersContains(String member);
+    List<LdapRole> findAllByMembersEquals(String member);
 }

@@ -19,13 +19,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 
-public class JwtAuthRequestFilter extends OncePerRequestFilter {
+public class JwtAuthenticationRequestFilter extends OncePerRequestFilter {
 
     private final AuthenticationManager authenticationManager;
     private final SecurityURLSettings securityURLSettings;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
 
-    public JwtAuthRequestFilter(AuthenticationManager authenticationManager, SecurityURLSettings securityURLSettings, JwtAuthenticationEntryPoint authenticationEntryPoint) {
+    public JwtAuthenticationRequestFilter(AuthenticationManager authenticationManager, SecurityURLSettings securityURLSettings, JwtAuthenticationEntryPoint authenticationEntryPoint) {
         this.authenticationManager = authenticationManager;
         this.securityURLSettings = securityURLSettings;
         this.authenticationEntryPoint = authenticationEntryPoint;
